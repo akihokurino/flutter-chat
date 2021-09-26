@@ -13,6 +13,27 @@ final chatProvider = StateNotifierProvider<_Provider, _State>((ref) {
 
 final _me = User(id: const Uuid().v4(), name: "あなた", iconUrl: Uri.parse("https://via.placeholder.com/50x50"));
 
+_sampleMessages(Chat chat) {
+  final me = _me;
+  final other = chat.owners.where((element) => element.id != me.id).first;
+
+  List<Message> messages = [];
+  for (var i = 0; i < 20; i++) {
+    final seed = Random().nextInt(10);
+    messages.add(Message(
+        id: const Uuid().v4(),
+        chatId: chat.id,
+        owner: i % 2 == 0 ? me : other,
+        text: i % 2 == 0
+            ? "自分です自分です自分です自分です自分です自分です自分です（$i）"
+            : "相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です（$i）",
+        imageUrl: seed < 5 ? Uri.parse("https://via.placeholder.com/250x200") : null,
+        createdAt: DateTime.now().add(const Duration(days: -1)).add(Duration(minutes: i))));
+  }
+
+  return messages.reversed.toList();
+}
+
 class _Provider extends StateNotifier<_State> {
   _Provider() : super(_State.init());
 
@@ -21,29 +42,16 @@ class _Provider extends StateNotifier<_State> {
   }
 
   void initMessage(Chat chat) {
-    final me = _me;
-    final other = chat.owners.where((element) => element.id != me.id).first;
-
     if (state.messages.isNotEmpty && state.messages.first.chatId == chat.id) {
       state = state.initMessage(chat, state.messages);
       return;
     }
 
-    List<Message> messages = [];
-    for (var i = 0; i < 100; i++) {
-      final seed = Random().nextInt(10);
-      messages.add(Message(
-          id: const Uuid().v4(),
-          chatId: chat.id,
-          owner: i % 2 == 0 ? me : other,
-          text: i % 2 == 0
-              ? "自分です自分です自分です自分です自分です自分です自分です（$i）"
-              : "相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です相手です（$i）",
-          imageUrl: seed < 5 ? Uri.parse("https://via.placeholder.com/250x200") : null,
-          createdAt: DateTime.now()));
-    }
+    state = state.initMessage(chat, _sampleMessages(chat));
+  }
 
-    state = state.initMessage(chat, messages);
+  void prevMessage(Chat chat) {
+    state = state.prevMessage(_sampleMessages(chat));
   }
 
   void sendTextMessage(Chat chat, String text) {
@@ -76,39 +84,46 @@ class _State {
     return _State(me: me, chats: chats, messages: messages, isInitChatUI: true);
   }
 
-  _State initMessage(Chat chat, List<Message> messages) {
-    Message? last;
+  _State initMessage(Chat chat, List<Message> items) {
+    Message? first;
     try {
-      last = messages.last;
+      first = items.first;
     } catch (_) {}
 
     return _State(
         me: me,
         chats: chats.map((element) {
           if (element.id == chat.id) {
-            return element.updateMessage(last);
+            return element.updateMessage(first);
           } else {
             return element;
           }
         }).toList(),
-        messages: messages,
+        messages: items,
         isInitChatUI: false);
   }
 
-  _State addMessage(Chat chat, Message message) {
-    final current = messages;
-    current.add(message);
+  _State prevMessage(List<Message> items) {
+    List<Message> next = messages;
+    next.addAll(items);
+
+    return _State(me: me, chats: chats, messages: next, isInitChatUI: isInitChatUI);
+  }
+
+  _State addMessage(Chat chat, Message item) {
+    final next = messages;
+    next.insert(0, item);
 
     return _State(
         me: me,
         chats: chats.map((element) {
           if (element.id == chat.id) {
-            return element.updateMessage(message);
+            return element.updateMessage(item);
           } else {
             return element;
           }
         }).toList(),
-        messages: current,
+        messages: next,
         isInitChatUI: isInitChatUI);
   }
 
@@ -116,16 +131,16 @@ class _State {
     final current = messages;
     current.removeWhere((element) => element.id == id);
 
-    Message? last;
+    Message? first;
     try {
-      last = current.last;
+      first = current.first;
     } catch (_) {}
 
     return _State(
         me: me,
         chats: chats.map((element) {
           if (element.id == chat.id) {
-            return element.updateMessage(last);
+            return element.updateMessage(first);
           } else {
             return element;
           }

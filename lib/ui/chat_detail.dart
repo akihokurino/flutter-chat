@@ -42,7 +42,7 @@ class ChatDetail extends ConsumerWidget {
     if (!state.isInitChatUI) {
       WidgetsBinding.instance?.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 1000)).then((_) {
-          _scrollCtl.animateTo(_scrollCtl.position.maxScrollExtent, duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
+          _scrollCtl.animateTo(0, duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
 
           Future.delayed(const Duration(milliseconds: 1000)).then((_) {
             action.initChatUI();
@@ -61,6 +61,7 @@ class ChatDetail extends ConsumerWidget {
       }).toList(),
       dateFormat: DateFormat('yyyy/MM/dd'),
       timeFormat: DateFormat('HH:mm'),
+      inverted: true,
       showUserAvatar: false,
       showAvatarForEveryMessage: false,
       scrollToBottom: false,
@@ -81,7 +82,9 @@ class ChatDetail extends ConsumerWidget {
         ),
         color: ThemeData.dark().primaryColor,
       ),
-      onLoadEarlier: () {},
+      onLoadEarlier: () {
+        action.prevMessage(chat);
+      },
       onQuickReply: (Reply reply) {},
       messageBuilder: (ChatMessage message) {
         return MessageCell(message: message, me: state.me);
@@ -115,7 +118,7 @@ class ChatDetail extends ConsumerWidget {
         action.sendTextMessage(chat, text);
 
         Future.delayed(const Duration(milliseconds: 500)).then((_) {
-          _scrollCtl.animateTo(_scrollCtl.position.maxScrollExtent, duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
+          _scrollCtl.animateTo(0, duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
         });
       },
       trailing: <Widget>[
