@@ -21,7 +21,7 @@ class ChatList extends ConsumerWidget {
           me: state.me,
           onClick: () {
             action.initMessage(element);
-            push(context, ChatDetail());
+            push(context, ChatDetail(chat: element));
           });
     }).toList();
 
@@ -29,7 +29,7 @@ class ChatList extends ConsumerWidget {
       key: key,
       appBar: AppBar(
         title: const Text("チャット"),
-        backgroundColor: ThemeData.dark().primaryColor,
+        backgroundColor: Colors.transparent,
         elevation: 0.0,
         shadowColor: Colors.transparent,
       ),

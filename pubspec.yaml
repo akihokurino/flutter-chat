@@ -51,6 +51,7 @@ dev_dependencies:
   intl: ^0.17.0
   cached_network_image: ^3.1.0
   modal_progress_hud_nsn: ^0.1.0-nullsafety-1
+  image_picker: ^0.8.4+2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

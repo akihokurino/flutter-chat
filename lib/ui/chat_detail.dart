@@ -1,10 +1,15 @@
+import 'dart:io';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:chat/model/chat.dart';
 import 'package:chat/model/message.dart';
 import 'package:chat/model/user.dart';
 import 'package:chat/provider/chat.dart';
+import 'package:chat/ui/dialog.dart';
 import 'package:dash_chat/dash_chat.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import "package:intl/intl.dart";
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 
@@ -12,8 +17,9 @@ class ChatDetail extends ConsumerWidget {
   final GlobalKey<DashChatState> _chatViewKey = GlobalKey<DashChatState>();
   final _textInputCtl = TextEditingController();
   final _scrollCtl = ScrollController(initialScrollOffset: 0.0);
+  final Chat chat;
 
-  ChatDetail({Key? key}) : super(key: key);
+  ChatDetail({Key? key, required this.chat}) : super(key: key);
 
   ChatUser _userFrom(User user) {
     return ChatUser(uid: user.id, name: user.name, avatar: user.iconUrl?.toString() ?? "");
@@ -47,7 +53,8 @@ class ChatDetail extends ConsumerWidget {
 
     final dashChat = DashChat(
       key: _chatViewKey,
-      inverted: false,
+      textController: _textInputCtl,
+      scrollController: _scrollCtl,
       user: _userFrom(state.me),
       messages: state.messages.map((element) {
         return _messageFrom(element);
@@ -57,11 +64,11 @@ class ChatDetail extends ConsumerWidget {
       showUserAvatar: false,
       showAvatarForEveryMessage: false,
       scrollToBottom: false,
-      onPressAvatar: (ChatUser user) {},
-      onLongPressAvatar: (ChatUser user) {},
+      alwaysShowSend: true,
+      shouldShowLoadEarlier: false,
+      showTraillingBeforeSend: true,
       inputMaxLines: 5,
       messageContainerPadding: const EdgeInsets.only(left: 5.0, right: 5.0),
-      alwaysShowSend: true,
       inputToolbarPadding: const EdgeInsets.fromLTRB(0, 5, 0, 5),
       inputTextStyle: const TextStyle(fontSize: 16.0),
       inputDecoration: const InputDecoration.collapsed(hintText: "テキスト..."),
@@ -75,27 +82,14 @@ class ChatDetail extends ConsumerWidget {
         color: ThemeData.dark().primaryColor,
       ),
       onLoadEarlier: () {},
-      shouldShowLoadEarlier: false,
-      showTraillingBeforeSend: true,
       onQuickReply: (Reply reply) {},
-      trailing: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.photo, color: Colors.blueAccent),
-          onPressed: () async {
-            // final result = await ImagePicker().getImage(
-            //   source: ImageSource.gallery,
-            //   imageQuality: 100,
-            // );
-            //
-            // onSendFile(result);
-          },
-        )
-      ],
       messageBuilder: (ChatMessage message) {
         return MessageCell(message: message, me: state.me);
       },
       sendButtonBuilder: (Function click) {
         return IconButton(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
           icon: const Icon(Icons.send, color: Colors.blueAccent),
           onPressed: () {
             click();
@@ -108,16 +102,63 @@ class ChatDetail extends ConsumerWidget {
       dateBuilder: (val) {
         return Container();
       },
-      onSend: (val) {},
-      textController: _textInputCtl,
-      scrollController: _scrollCtl,
+      onSend: (ChatMessage val) {
+        if (val.image != null) {
+          return;
+        }
+
+        final text = val.text ?? "";
+        if (text.isEmpty) {
+          return;
+        }
+
+        action.sendTextMessage(chat, text);
+
+        Future.delayed(const Duration(milliseconds: 500)).then((_) {
+          _scrollCtl.animateTo(_scrollCtl.position.maxScrollExtent, duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
+        });
+      },
+      trailing: <Widget>[
+        IconButton(
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+          icon: const Icon(Icons.photo, color: Colors.blueAccent),
+          onPressed: () async {
+            final file = await ImagePicker().pickImage(
+              source: ImageSource.gallery,
+              imageQuality: 100,
+            );
+
+            if (file == null) {
+              return;
+            }
+
+            action.sendImageMessage(chat, File(file.path));
+
+            Future.delayed(const Duration(milliseconds: 500)).then((_) {
+              _scrollCtl.animateTo(_scrollCtl.position.maxScrollExtent,
+                  duration: const Duration(milliseconds: 10), curve: Curves.easeInOut);
+            });
+          },
+        )
+      ],
+      onPressAvatar: (ChatUser user) {},
+      onLongPressAvatar: (ChatUser user) {},
+      onLongPressMessage: (ChatMessage message) {
+        if (message.user.uid != state.me.id) {
+          return;
+        }
+        AppDialog().showConfirm(context, "確認", "メッセージを削除します。", () {
+          action.deleteMessage(chat, message.id!);
+        });
+      },
     );
 
     return Scaffold(
       key: key,
       appBar: AppBar(
         title: const Text("メッセージ"),
-        backgroundColor: ThemeData.dark().primaryColor,
+        backgroundColor: Colors.transparent,
         elevation: 0.0,
         shadowColor: Colors.transparent,
       ),

@@ -5,10 +5,9 @@ import "package:intl/intl.dart";
 class Chat {
   final String id;
   final List<User> owners;
-  final DateTime lastUpdatedAt;
   final Message? lastMessage;
 
-  Chat({required this.id, required this.owners, required this.lastUpdatedAt, this.lastMessage});
+  Chat({required this.id, required this.owners, this.lastMessage});
 
   User other(User me) {
     return owners.where((element) => element.id != me.id).first;
@@ -31,6 +30,10 @@ class Chat {
       return "";
     }
     var formatter = DateFormat('MM/dd', "ja_JP");
-    return formatter.format(lastUpdatedAt);
+    return formatter.format(lastMessage!.createdAt);
+  }
+
+  Chat updateMessage(Message? message) {
+    return Chat(id: id, owners: owners, lastMessage: message);
   }
 }
